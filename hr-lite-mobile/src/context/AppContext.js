@@ -1,5 +1,6 @@
-import React, { createContext, useContext, useState, useCallback } from 'react';
-import { employeeApi, contractApi, leaveApi } from '../api/api';
+import React, { createContext, useContext, useState, useCallback, useEffect } from 'react';
+import * as SecureStore from 'expo-secure-store';
+import { employeeApi, contractApi, leaveApi, authApi } from '../api/api';
 
 const AppContext = createContext(null);
 
@@ -12,6 +13,9 @@ export const useApp = () => {
 };
 
 export const AppProvider = ({ children }) => {
+    const [userToken, setUserToken] = useState(null);
+    const [isAuthLoading, setIsAuthLoading] = useState(true);
+
     const [employees, setEmployees] = useState([]);
     const [selectedEmployee, setSelectedEmployee] = useState(null);
     const [contracts, setContracts] = useState([]);
@@ -26,6 +30,51 @@ export const AppProvider = ({ children }) => {
     const [error, setError] = useState(null);
 
     const clearError = useCallback(() => setError(null), []);
+
+    // Auth Logic
+    const login = useCallback(async (username, password) => {
+        try {
+            setLoading(true);
+            const response = await authApi.login(username, password);
+            const { token } = response.data.data;
+            
+            await SecureStore.setItemAsync('userToken', token);
+            setUserToken(token);
+            setError(null);
+            return true;
+        } catch (err) {
+            setError('Login failed. Please check your credentials.');
+            console.error('Login error:', err);
+            return false;
+        } finally {
+            setLoading(false);
+        }
+    }, []);
+
+    const logout = useCallback(async () => {
+        try {
+            await SecureStore.deleteItemAsync('userToken');
+            setUserToken(null);
+        } catch (err) {
+            console.error('Logout error:', err);
+        }
+    }, []);
+
+    // Restore token on app start
+    useEffect(() => {
+        const bootstrapAsync = async () => {
+            try {
+                const token = await SecureStore.getItemAsync('userToken');
+                setUserToken(token);
+            } catch (e) {
+                console.error('Restoring token failed', e);
+            } finally {
+                setIsAuthLoading(false);
+            }
+        };
+
+        bootstrapAsync();
+    }, []);
 
     // Dashboard
     const fetchDashboardStats = useCallback(async () => {
@@ -202,6 +251,10 @@ export const AppProvider = ({ children }) => {
     }, []);
 
     const value = {
+        userToken,
+        isAuthLoading,
+        login,
+        logout,
         employees,
         selectedEmployee,
         contracts,

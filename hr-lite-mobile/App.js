@@ -3,12 +3,14 @@ import { StatusBar } from 'expo-status-bar';
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
-import { Provider as PaperProvider, MD3LightTheme } from 'react-native-paper';
+import { Provider as PaperProvider, MD3LightTheme, ActivityIndicator } from 'react-native-paper';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
+import { View } from 'react-native';
 
-import { AppProvider } from './src/context/AppContext';
+import { AppProvider, useApp } from './src/context/AppContext';
 import { colors, paperTheme } from './src/theme/theme';
+import LoginScreen from './src/screens/LoginScreen';
 import DashboardScreen from './src/screens/DashboardScreen';
 import EmployeeListScreen from './src/screens/EmployeeListScreen';
 import EmployeeDetailScreen from './src/screens/EmployeeDetailScreen';
@@ -71,23 +73,49 @@ const TabNavigator = () => (
   </Tab.Navigator>
 );
 
+const AuthNavigator = () => (
+  <Stack.Navigator screenOptions={{ headerShown: false }}>
+    <Stack.Screen name="Login" component={LoginScreen} />
+  </Stack.Navigator>
+);
+
+const AppNavigator = () => (
+  <Stack.Navigator screenOptions={screenOptions}>
+    <Stack.Screen name="Main" component={TabNavigator} options={{ headerShown: false }} />
+    <Stack.Screen name="EmployeeDetail" component={EmployeeDetailScreen} options={{ title: 'Employee Details' }} />
+    <Stack.Screen name="EditEmployee" component={EditEmployeeScreen} options={{ title: 'Edit Employee', presentation: 'modal' }} />
+    <Stack.Screen name="AddContract" component={AddContractScreen} options={{ title: 'Add Contract', presentation: 'modal' }} />
+    <Stack.Screen name="AddEmployee" component={AddEmployeeScreen} options={{ title: 'Add Employee', presentation: 'modal' }} />
+    <Stack.Screen name="CreateLeave" component={CreateLeaveScreen} options={{ title: 'Request Leave', presentation: 'modal' }} />
+  </Stack.Navigator>
+);
+
+const RootNavigator = () => {
+  const { userToken, isAuthLoading } = useApp();
+
+  if (isAuthLoading) {
+    return (
+      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: colors.primary }}>
+        <ActivityIndicator size="large" color="white" />
+      </View>
+    );
+  }
+
+  return (
+    <NavigationContainer>
+      <StatusBar style="light" backgroundColor={colors.primary} />
+      {userToken ? <AppNavigator /> : <AuthNavigator />}
+    </NavigationContainer>
+  );
+};
+
 // Main App Navigator
 export default function App() {
   return (
     <SafeAreaProvider>
       <PaperProvider theme={theme}>
         <AppProvider>
-          <NavigationContainer>
-            <StatusBar style="light" backgroundColor={colors.primary} />
-            <Stack.Navigator screenOptions={screenOptions}>
-              <Stack.Screen name="Main" component={TabNavigator} options={{ headerShown: false }} />
-              <Stack.Screen name="EmployeeDetail" component={EmployeeDetailScreen} options={{ title: 'Employee Details' }} />
-              <Stack.Screen name="EditEmployee" component={EditEmployeeScreen} options={{ title: 'Edit Employee', presentation: 'modal' }} />
-              <Stack.Screen name="AddContract" component={AddContractScreen} options={{ title: 'Add Contract', presentation: 'modal' }} />
-              <Stack.Screen name="AddEmployee" component={AddEmployeeScreen} options={{ title: 'Add Employee', presentation: 'modal' }} />
-              <Stack.Screen name="CreateLeave" component={CreateLeaveScreen} options={{ title: 'Request Leave', presentation: 'modal' }} />
-            </Stack.Navigator>
-          </NavigationContainer>
+          <RootNavigator />
         </AppProvider>
       </PaperProvider>
     </SafeAreaProvider>

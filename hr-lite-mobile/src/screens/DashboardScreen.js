@@ -11,7 +11,7 @@ import { colors, spacing, shadows, typography, borderRadius } from '../theme/the
 const CURRENT_EMPLOYEE_ID = 1;
 
 const DashboardScreen = ({ navigation }) => {
-    const { dashboardStats, loading, fetchDashboardStats, fetchPendingLeaves, pendingLeaves } = useApp();
+    const { dashboardStats, loading, fetchDashboardStats, fetchPendingLeaves, pendingLeaves, logout } = useApp();
     const [refreshing, setRefreshing] = useState(false);
     const [attendance, setAttendance] = useState(null);
     const [attendanceLoading, setAttendanceLoading] = useState(false);
@@ -208,8 +208,15 @@ const DashboardScreen = ({ navigation }) => {
             refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={[colors.primary]} />}
         >
             <View style={styles.header}>
-                <Text style={styles.greeting}>Welcome to</Text>
-                <Text style={styles.appName}>HR Lite</Text>
+                <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <View>
+                        <Text style={styles.greeting}>Welcome to</Text>
+                        <Text style={styles.appName}>HR Lite</Text>
+                    </View>
+                    <Button icon="logout" mode="text" onPress={logout} textColor={colors.error}>
+                        Logout
+                    </Button>
+                </View>
                 <Text style={styles.date}>
                     {new Date().toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
                 </Text>

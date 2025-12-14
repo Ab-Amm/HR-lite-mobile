@@ -3,15 +3,18 @@ package com.hrlite.config;
 import com.hrlite.entity.Contract;
 import com.hrlite.entity.Employee;
 import com.hrlite.entity.LeaveRequest;
+import com.hrlite.entity.User;
 import com.hrlite.entity.enums.ContractType;
 import com.hrlite.entity.enums.LeaveStatus;
 import com.hrlite.entity.enums.LeaveType;
 import com.hrlite.repository.ContractRepository;
 import com.hrlite.repository.EmployeeRepository;
 import com.hrlite.repository.LeaveRequestRepository;
+import com.hrlite.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.CommandLineRunner;
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -26,11 +29,17 @@ public class DataLoader implements CommandLineRunner {
         private final EmployeeRepository employeeRepository;
         private final ContractRepository contractRepository;
         private final LeaveRequestRepository leaveRequestRepository;
+        private final UserRepository userRepository;
+        private BCryptPasswordEncoder encoder = new BCryptPasswordEncoder(12);
 
         @Override
         @Transactional
         public void run(String... args) {
                 log.info("🚀 Starting HR Lite data initialization...");
+
+
+                createUser("user" , "user" , "user@gmail.com" , encoder.encode("user"));
+
 
                 // Create 5 realistic employees
                 Employee sarah = createEmployee(
@@ -74,6 +83,7 @@ public class DataLoader implements CommandLineRunner {
                                 "+1 (555) 567-8901");
 
                 log.info("✅ Created 5 employees");
+
 
                 // Create contracts for each employee (2 each - showing career progression)
 
@@ -158,6 +168,13 @@ public class DataLoader implements CommandLineRunner {
                                 .build();
                 return employeeRepository.save(employee);
         }
+
+        private User createUser(String firstNmae , String lastName, String email, String password) {
+                User user = User.builder().firstName(firstNmae).lastName(lastName).email(email).password(password).build();
+                return userRepository.save(user);
+        }
+
+
 
         private Contract createContract(Employee employee, ContractType type,
                         LocalDate startDate, LocalDate endDate, BigDecimal salary, boolean isActive) {

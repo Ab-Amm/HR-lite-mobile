@@ -1,11 +1,12 @@
 import axios from 'axios';
 import { Platform } from 'react-native';
+import * as SecureStore from 'expo-secure-store';
 
 // =====================================================
 // PHYSICAL DEVICE: Using your machine's local IP
 // Change this IP if your network changes
 // =====================================================
-const BASE_URL = 'http://192.168.0.170:8080/api';
+const BASE_URL = 'http://192.168.1.15:8080/api';
 
 // For Android Emulator only, uncomment this instead:
 // const BASE_URL = 'http://10.0.2.2:8080/api';
@@ -23,10 +24,17 @@ const api = axios.create({
     },
 });
 
-// Request interceptor for logging
+// Request interceptor for logging and Auth
 api.interceptors.request.use(
-    (config) => {
+    async (config) => {
         console.log(`📤 ${config.method?.toUpperCase()} ${config.url}`);
+        
+        const token = await SecureStore.getItemAsync('userToken');
+        console.log('Using token:', token);
+        if (token) {
+            config.headers.Authorization = `Bearer ${token}`;
+        }
+        
         return config;
     },
     (error) => {
@@ -46,6 +54,12 @@ api.interceptors.response.use(
         return Promise.reject(error);
     }
 );
+
+// ==================== AUTH API ====================
+
+export const authApi = {
+    login: (username, password) => api.post('/auth/login', { userName: username, password }),
+};
 
 // ==================== EMPLOYEE API ====================
 
