@@ -6,7 +6,7 @@ import * as SecureStore from 'expo-secure-store';
 // PHYSICAL DEVICE: Using your machine's local IP
 // Change this IP if your network changes
 // =====================================================
-const BASE_URL = 'http://192.168.0.117:8080/api';
+const BASE_URL = 'http://192.168.0.122:8090/api';
 
 // For Android Emulator only, uncomment this instead:
 // const BASE_URL = 'http://10.0.2.2:8080/api';
@@ -70,6 +70,26 @@ export const employeeApi = {
     create: (employee) => api.post('/employees', employee),
     update: (id, employee) => api.put(`/employees/${id}`, employee),
     delete: (id) => api.delete(`/employees/${id}`),
+    // Get current employee profile (self)
+    getCurrentEmployee: () => api.get('/employees/me'),
+};
+
+// ==================== UTILITY: JWT DECODER ====================
+export const decodeJwt = (token) => {
+    try {
+        const base64Url = token.split('.')[1];
+        const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+        const jsonPayload = decodeURIComponent(
+            atob(base64)
+                .split('')
+                .map((c) => '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2))
+                .join('')
+        );
+        return JSON.parse(jsonPayload);
+    } catch (error) {
+        console.error('Failed to decode JWT:', error);
+        return null;
+    }
 };
 
 // ==================== CONTRACT API ====================

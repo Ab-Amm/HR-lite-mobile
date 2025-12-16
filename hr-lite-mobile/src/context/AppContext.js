@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useState, useCallback, useEffect } from 'react';
 import * as SecureStore from 'expo-secure-store';
-import { employeeApi, contractApi, leaveApi, authApi } from '../api/api';
+import { employeeApi, contractApi, leaveApi, authApi, decodeJwt } from '../api/api';
 
 const AppContext = createContext(null);
 
@@ -15,7 +15,11 @@ export const useApp = () => {
 export const AppProvider = ({ children }) => {
     const [userToken, setUserToken] = useState(null);
     const [userRole, setUserRole] = useState(null);
+    const [userId, setUserId] = useState(null);
     const [isAuthLoading, setIsAuthLoading] = useState(true);
+
+    // Current Employee (for employee role)
+    const [currentEmployee, setCurrentEmployee] = useState(null);
 
     const [employees, setEmployees] = useState([]);
     const [selectedEmployee, setSelectedEmployee] = useState(null);
@@ -41,13 +45,21 @@ export const AppProvider = ({ children }) => {
             const data = response.data.data || response.data;
             const { token, role } = data;
             
+            // Decode JWT to get user ID
+            const decoded = decodeJwt(token);
+            const extractedUserId = decoded?.userId || decoded?.sub || decoded?.id;
+            
             await SecureStore.setItemAsync('userToken', token);
             if (role) {
                 await SecureStore.setItemAsync('userRole', role);
             }
+            if (extractedUserId) {
+                await SecureStore.setItemAsync('userId', String(extractedUserId));
+            }
             
             setUserToken(token);
             setUserRole(role);
+            setUserId(extractedUserId);
             setError(null);
             return true;
         } catch (err) {
@@ -63,8 +75,11 @@ export const AppProvider = ({ children }) => {
         try {
             await SecureStore.deleteItemAsync('userToken');
             await SecureStore.deleteItemAsync('userRole');
+            await SecureStore.deleteItemAsync('userId');
             setUserToken(null);
             setUserRole(null);
+            setUserId(null);
+            setCurrentEmployee(null);
         } catch (err) {
             console.error('Logout error:', err);
         }
@@ -76,8 +91,10 @@ export const AppProvider = ({ children }) => {
             try {
                 const token = await SecureStore.getItemAsync('userToken');
                 const role = await SecureStore.getItemAsync('userRole');
+                const storedUserId = await SecureStore.getItemAsync('userId');
                 setUserToken(token);
                 setUserRole(role);
+                setUserId(storedUserId ? Number(storedUserId) : null);
             } catch (e) {
                 console.error('Restoring token failed', e);
             } finally {
@@ -87,6 +104,44 @@ export const AppProvider = ({ children }) => {
 
         bootstrapAsync();
     }, []);
+
+    // Auto-fetch employee data when userId and role are available
+    useEffect(() => {
+        const loadEmployeeData = async () => {
+            if (userId && userRole === 'EMPLOYEE' && !currentEmployee) {
+                try {
+                    const response = await employeeApi.getById(userId);
+                    setCurrentEmployee(response.data);
+                } catch (err) {
+                    console.error('Failed to pre-fetch employee data:', err);
+                }
+            }
+        };
+        loadEmployeeData();
+    }, [userId, userRole, currentEmployee]);
+
+    // Fetch current employee profile (for employee users)
+    const fetchCurrentEmployee = useCallback(async (forceRefresh = false) => {
+        if (!userId) return null;
+        // Return cached data if available and not forcing refresh
+        if (currentEmployee && !forceRefresh) {
+            return currentEmployee;
+        }
+        try {
+            setLoading(true);
+            // Fetch employee by the user ID from JWT
+            const response = await employeeApi.getById(userId);
+            setCurrentEmployee(response.data);
+            setError(null);
+            return response.data;
+        } catch (err) {
+            console.error('Failed to fetch current employee:', err);
+            setError('Failed to load profile');
+            return null;
+        } finally {
+            setLoading(false);
+        }
+    }, [userId]);
 
     // Dashboard
     const fetchDashboardStats = useCallback(async () => {
@@ -265,9 +320,12 @@ export const AppProvider = ({ children }) => {
     const value = {
         userToken,
         userRole,
+        userId,
         isAuthLoading,
         login,
         logout,
+        currentEmployee,
+        fetchCurrentEmployee,
         employees,
         selectedEmployee,
         contracts,
