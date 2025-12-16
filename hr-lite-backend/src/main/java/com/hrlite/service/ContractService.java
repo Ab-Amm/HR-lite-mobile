@@ -9,6 +9,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigDecimal;
 import java.util.List;
 import java.util.Optional;
 
@@ -49,6 +50,52 @@ public class ContractService {
         Employee employee = employeeRepository.findById(employeeId)
                 .orElseThrow(() -> new IllegalArgumentException("Employee not found with id: " + employeeId));
 
+        // Validate positive salary
+        if (contract.getSignedSalary() == null || contract.getSignedSalary().compareTo(BigDecimal.ZERO) <= 0) {
+            throw new IllegalArgumentException("Signed salary must be positive");
+        }
+
+        // Validate dates: end date must be after start date
+        if (contract.getEndDate() != null && contract.getEndDate().isBefore(contract.getStartDate())) {
+            throw new IllegalArgumentException("End date cannot be before start date");
+        }
+
+        // Validate contract start date cannot be before employee join date
+        if (contract.getStartDate().isBefore(employee.getJoinDate())) {
+            throw new IllegalArgumentException("Contract start date cannot be before employee join date (" + employee.getJoinDate() + ")");
+        }
+
+        // Contract type-specific validations
+        if (contract.getType() == ContractType.CDI && contract.getEndDate() != null) {
+            throw new IllegalArgumentException("CDI (permanent) contracts cannot have an end date");
+        }
+
+        if (contract.getType() == ContractType.INTERNSHIP) {
+            // Internship salary should be reasonable (max 30,000)
+            if (contract.getSignedSalary().compareTo(new BigDecimal("30000")) > 0) {
+                throw new IllegalArgumentException("Internship salary cannot exceed 30,000");
+            }
+            // Internship must have end date
+            if (contract.getEndDate() == null) {
+                throw new IllegalArgumentException("Internship contracts must have an end date");
+            }
+        }
+
+        if (contract.getType() == ContractType.CDD && contract.getEndDate() == null) {
+            throw new IllegalArgumentException("CDD (fixed-term) contracts must have an end date");
+        }
+
+        // Check for overlapping contracts
+        List<Contract> existingContracts = contractRepository.findByEmployeeIdOrderByStartDateDesc(employeeId);
+        for (Contract existing : existingContracts) {
+            if (isOverlapping(contract, existing)) {
+                throw new IllegalArgumentException(
+                    "Contract dates overlap with existing contract (" + 
+                    existing.getType() + " from " + existing.getStartDate() + " to " + 
+                    (existing.getEndDate() != null ? existing.getEndDate() : "ongoing") + ")");
+            }
+        }
+
         contract.setEmployee(employee);
 
         // If this contract is active, deactivate all previous contracts
@@ -71,6 +118,19 @@ public class ContractService {
     public Contract updateContract(Long id, Contract updatedContract) {
         return contractRepository.findById(id)
                 .map(contract -> {
+                    // Validate positive salary
+                    if (updatedContract.getSignedSalary() != null && 
+                        updatedContract.getSignedSalary().compareTo(BigDecimal.ZERO) <= 0) {
+                        throw new IllegalArgumentException("Signed salary must be positive");
+                    }
+                    
+                    // Validate dates if being updated
+                    if (updatedContract.getStartDate() != null && updatedContract.getEndDate() != null) {
+                        if (updatedContract.getEndDate().isBefore(updatedContract.getStartDate())) {
+                            throw new IllegalArgumentException("End date cannot be before start date");
+                        }
+                    }
+                    
                     contract.setType(updatedContract.getType());
                     contract.setStartDate(updatedContract.getStartDate());
                     contract.setEndDate(updatedContract.getEndDate());
@@ -118,5 +178,21 @@ public class ContractService {
     @Transactional(readOnly = true)
     public Optional<Contract> getActiveContractForEmployee(Long employeeId) {
         return contractRepository.findByEmployeeIdAndIsActiveTrue(employeeId);
+    }
+
+    /**
+     * Checks if two contracts have overlapping date ranges.
+     */
+    private boolean isOverlapping(Contract contract1, Contract contract2) {
+        // If either contract has no end date (ongoing), check if start dates conflict
+        if (contract1.getEndDate() == null || contract2.getEndDate() == null) {
+            // Ongoing contracts overlap if one starts before the other ends (or is also ongoing)
+            return !contract1.getStartDate().isAfter(contract2.getEndDate() != null ? contract2.getEndDate() : contract1.getStartDate())
+                && !contract2.getStartDate().isAfter(contract1.getEndDate() != null ? contract1.getEndDate() : contract2.getStartDate());
+        }
+        
+        // Both have end dates - check for overlap
+        return !contract1.getStartDate().isAfter(contract2.getEndDate()) 
+            && !contract2.getStartDate().isAfter(contract1.getEndDate());
     }
 }

@@ -81,6 +81,16 @@ public class LeaveRequestController {
         }
     }
 
+    @PatchMapping("/{id}/cancel")
+    public ResponseEntity<LeaveRequest> cancelLeaveRequest(@PathVariable Long id) {
+        try {
+            LeaveRequest cancelledRequest = leaveRequestService.cancelLeaveRequest(id);
+            return ResponseEntity.ok(cancelledRequest);
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest().build();
+        }
+    }
+
     @PutMapping("/{id}")
     public ResponseEntity<LeaveRequest> updateLeaveRequest(@PathVariable Long id,
             @Valid @RequestBody LeaveRequest leaveRequest) {
