@@ -12,6 +12,7 @@ import { AppProvider, useApp } from './src/context/AppContext';
 import { colors, paperTheme } from './src/theme/theme';
 import LoginScreen from './src/screens/LoginScreen';
 import DashboardScreen from './src/screens/DashboardScreen';
+import EmployeeDashboardScreen from './src/screens/EmployeeDashboardScreen';
 import EmployeeListScreen from './src/screens/EmployeeListScreen';
 import EmployeeDetailScreen from './src/screens/EmployeeDetailScreen';
 import EditEmployeeScreen from './src/screens/EditEmployeeScreen';
@@ -79,6 +80,12 @@ const AuthNavigator = () => (
   </Stack.Navigator>
 );
 
+const EmployeeNavigator = () => (
+  <Stack.Navigator screenOptions={screenOptions}>
+    <Stack.Screen name="EmployeeDashboard" component={EmployeeDashboardScreen} options={{ title: 'Employee Portal' }} />
+  </Stack.Navigator>
+);
+
 const AppNavigator = () => (
   <Stack.Navigator screenOptions={screenOptions}>
     <Stack.Screen name="Main" component={TabNavigator} options={{ headerShown: false }} />
@@ -91,7 +98,7 @@ const AppNavigator = () => (
 );
 
 const RootNavigator = () => {
-  const { userToken, isAuthLoading } = useApp();
+  const { userToken, userRole, isAuthLoading } = useApp();
 
   if (isAuthLoading) {
     return (
@@ -104,7 +111,13 @@ const RootNavigator = () => {
   return (
     <NavigationContainer>
       <StatusBar style="light" backgroundColor={colors.primary} />
-      {userToken ? <AppNavigator /> : <AuthNavigator />}
+      {!userToken ? (
+        <AuthNavigator />
+      ) : userRole === 'EMPLOYEE' ? (
+        <EmployeeNavigator />
+      ) : (
+        <AppNavigator />
+      )}
     </NavigationContainer>
   );
 };

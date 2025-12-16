@@ -14,6 +14,7 @@ export const useApp = () => {
 
 export const AppProvider = ({ children }) => {
     const [userToken, setUserToken] = useState(null);
+    const [userRole, setUserRole] = useState(null);
     const [isAuthLoading, setIsAuthLoading] = useState(true);
 
     const [employees, setEmployees] = useState([]);
@@ -36,10 +37,17 @@ export const AppProvider = ({ children }) => {
         try {
             setLoading(true);
             const response = await authApi.login(username, password);
-            const { token } = response.data.data;
+            // Handle both response structures (direct or wrapped in data)
+            const data = response.data.data || response.data;
+            const { token, role } = data;
             
             await SecureStore.setItemAsync('userToken', token);
+            if (role) {
+                await SecureStore.setItemAsync('userRole', role);
+            }
+            
             setUserToken(token);
+            setUserRole(role);
             setError(null);
             return true;
         } catch (err) {
@@ -54,7 +62,9 @@ export const AppProvider = ({ children }) => {
     const logout = useCallback(async () => {
         try {
             await SecureStore.deleteItemAsync('userToken');
+            await SecureStore.deleteItemAsync('userRole');
             setUserToken(null);
+            setUserRole(null);
         } catch (err) {
             console.error('Logout error:', err);
         }
@@ -65,7 +75,9 @@ export const AppProvider = ({ children }) => {
         const bootstrapAsync = async () => {
             try {
                 const token = await SecureStore.getItemAsync('userToken');
+                const role = await SecureStore.getItemAsync('userRole');
                 setUserToken(token);
+                setUserRole(role);
             } catch (e) {
                 console.error('Restoring token failed', e);
             } finally {
@@ -252,6 +264,7 @@ export const AppProvider = ({ children }) => {
 
     const value = {
         userToken,
+        userRole,
         isAuthLoading,
         login,
         logout,

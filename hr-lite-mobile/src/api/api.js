@@ -6,7 +6,7 @@ import * as SecureStore from 'expo-secure-store';
 // PHYSICAL DEVICE: Using your machine's local IP
 // Change this IP if your network changes
 // =====================================================
-const BASE_URL = 'http://192.168.1.15:8080/api';
+const BASE_URL = 'http://192.168.0.117:8080/api';
 
 // For Android Emulator only, uncomment this instead:
 // const BASE_URL = 'http://10.0.2.2:8080/api';

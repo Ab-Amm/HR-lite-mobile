@@ -1,5 +1,6 @@
 package com.hrlite.Jwt.Service;
 
+import com.hrlite.entity.enums.Role;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.io.Decoders;
@@ -30,9 +31,10 @@ public class JWTService {
         }
     }
 
-    public String generateToken(String username  ,Long userId) {
+    public String generateToken(String username , List<Role> roles , Long userId) {
         Map<String, Object> claims = new HashMap<>();
         claims.put("userId",userId);
+        claims.put("roles",roles);
         return Jwts.builder()
                 .claims()
                 .add(claims)

@@ -6,6 +6,7 @@ import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import lombok.*;
+import lombok.experimental.SuperBuilder;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
@@ -18,21 +19,15 @@ import java.util.List;
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
-@Builder
-public class Employee {
+@SuperBuilder
+public class Employee extends User{
 
-    @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
 
     @NotBlank(message = "Full name is required")
     @Column(nullable = false)
     private String fullName;
 
-    @Email(message = "Email should be valid")
-    @NotBlank(message = "Email is required")
-    @Column(nullable = false, unique = true)
-    private String email;
+
 
     @NotBlank(message = "Position is required")
     @Column(nullable = false)

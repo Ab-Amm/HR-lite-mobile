@@ -1,12 +1,10 @@
 package com.hrlite.config;
 
-import com.hrlite.entity.Contract;
-import com.hrlite.entity.Employee;
-import com.hrlite.entity.LeaveRequest;
-import com.hrlite.entity.User;
+import com.hrlite.entity.*;
 import com.hrlite.entity.enums.ContractType;
 import com.hrlite.entity.enums.LeaveStatus;
 import com.hrlite.entity.enums.LeaveType;
+import com.hrlite.entity.enums.Role;
 import com.hrlite.repository.ContractRepository;
 import com.hrlite.repository.EmployeeRepository;
 import com.hrlite.repository.LeaveRequestRepository;
@@ -165,13 +163,15 @@ public class DataLoader implements CommandLineRunner {
                                 .currentSalary(salary)
                                 .joinDate(joinDate)
                                 .phoneNumber(phone)
+                                .role(Role.EMPLOYEE)
+                        .password(encoder.encode("test"))
                                 .build();
                 return employeeRepository.save(employee);
         }
 
         private User createUser(String firstNmae , String lastName, String email, String password) {
-                User user = User.builder().firstName(firstNmae).lastName(lastName).email(email).password(password).build();
-                return userRepository.save(user);
+                Hr hr = Hr.builder().firstName(firstNmae).lastName(lastName).email(email).password(password).role(Role.HR).build();
+                return userRepository.save(hr);
         }
 
 

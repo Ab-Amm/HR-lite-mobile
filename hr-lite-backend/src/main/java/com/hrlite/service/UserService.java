@@ -5,12 +5,16 @@ import com.hrlite.Jwt.Service.JWTService;
 import com.hrlite.controller.Response;
 import com.hrlite.dto.UserLoginDto;
 import com.hrlite.entity.User;
+import com.hrlite.entity.enums.Role;
 import com.hrlite.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Service;
+
+import java.util.ArrayList;
+import java.util.List;
 
 @Service
 @RequiredArgsConstructor
@@ -30,10 +34,12 @@ public class UserService {
             User userDb  = userDetails.getUser() ;
 
             userDb = userRepository.save(userDb);
-
-            String token = jwtService.generateToken(user.getUserName() , userDetails.getUser().getId());
+            List<Role> roles = new ArrayList<>();
+            roles.add(userDb.getRole());
+            String token = jwtService.generateToken(user.getUserName() ,roles, userDetails.getUser().getId());
             response.setError(false);
             response.getData().put("token",token);
+            response.getData().put("role", userDb.getRole().toString());
 
         } else {
 
