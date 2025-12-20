@@ -19,6 +19,7 @@ import AddContractScreen from './src/screens/AddContractScreen';
 import LeaveManagementScreen from './src/screens/LeaveManagementScreen';
 import CreateLeaveScreen from './src/screens/CreateLeaveScreen';
 import AddEmployeeScreen from './src/screens/AddEmployeeScreen';
+import EmployeesOnLeaveScreen from './src/screens/EmployeesOnLeaveScreen';
 
 // Employee Screens
 import EmployeeProfileScreen from './src/screens/employee/EmployeeProfileScreen';
@@ -151,6 +152,7 @@ const AppNavigator = () => (
     <Stack.Screen name="AddContract" component={AddContractScreen} options={{ title: 'Add Contract', presentation: 'modal' }} />
     <Stack.Screen name="AddEmployee" component={AddEmployeeScreen} options={{ title: 'Add Employee', presentation: 'modal' }} />
     <Stack.Screen name="CreateLeave" component={CreateLeaveScreen} options={{ title: 'Request Leave', presentation: 'modal' }} />
+    <Stack.Screen name="EmployeesOnLeave" component={EmployeesOnLeaveScreen} options={{ title: 'On Leave Today' }} />
   </Stack.Navigator>
 );
 

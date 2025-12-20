@@ -5,6 +5,7 @@ import com.hrlite.entity.enums.ContractType;
 import com.hrlite.entity.enums.LeaveStatus;
 import com.hrlite.entity.enums.LeaveType;
 import com.hrlite.entity.enums.Role;
+import com.hrlite.repository.AttendanceRepository;
 import com.hrlite.repository.ContractRepository;
 import com.hrlite.repository.EmployeeRepository;
 import com.hrlite.repository.LeaveRequestRepository;
@@ -27,6 +28,7 @@ public class DataLoader implements CommandLineRunner {
         private final EmployeeRepository employeeRepository;
         private final ContractRepository contractRepository;
         private final LeaveRequestRepository leaveRequestRepository;
+        private final AttendanceRepository attendanceRepository;
         private final UserRepository userRepository;
         private BCryptPasswordEncoder encoder = new BCryptPasswordEncoder(12);
 
@@ -148,6 +150,45 @@ public class DataLoader implements CommandLineRunner {
                                 LeaveStatus.PENDING);
 
                 log.info("✅ Created 10 leave requests (various statuses)");
+
+                // Create attendance records
+                // Sarah
+                createAttendance(sarah, today.minusDays(1), "09:00", "17:00");
+                createAttendance(sarah, today.minusDays(2), "09:15", "17:10");
+                createAttendance(sarah, today.minusDays(3), "08:55", "17:05");
+                createAttendance(sarah, today.minusDays(4), "09:00", "17:00");
+                createAttendance(sarah, today.minusDays(5), "09:05", "17:15");
+
+                // Michael
+                createAttendance(michael, today.minusDays(1), "08:30", "16:30");
+                createAttendance(michael, today.minusDays(2), "08:45", "16:45");
+                createAttendance(michael, today.minusDays(3), "08:30", "16:30");
+                createAttendance(michael, today.minusDays(4), "08:35", "16:40");
+                createAttendance(michael, today.minusDays(5), "08:30", "16:30");
+
+                // Emily
+                createAttendance(emily, today.minusDays(1), "09:30", "17:30");
+                createAttendance(emily, today.minusDays(2), "09:35", "17:40");
+                createAttendance(emily, today.minusDays(3), "09:30", "17:30");
+                createAttendance(emily, today.minusDays(4), "09:40", "17:45");
+                createAttendance(emily, today.minusDays(5), "09:30", "17:30");
+
+                // James
+                createAttendance(james, today.minusDays(1), "08:00", "16:00");
+                createAttendance(james, today.minusDays(2), "08:05", "16:10");
+                createAttendance(james, today.minusDays(3), "08:00", "16:00");
+                createAttendance(james, today.minusDays(4), "08:10", "16:15");
+                createAttendance(james, today.minusDays(5), "08:00", "16:00");
+
+                // Olivia
+                createAttendance(olivia, today.minusDays(1), "09:00", "17:00");
+                createAttendance(olivia, today.minusDays(2), "09:00", "17:00");
+                createAttendance(olivia, today.minusDays(3), "09:00", "17:00");
+                createAttendance(olivia, today.minusDays(4), "09:00", "17:00");
+                createAttendance(olivia, today.minusDays(5), "09:00", "17:00");
+
+                log.info("✅ Created attendance records");
+
                 log.info("🎉 HR Lite data initialization complete!");
                 log.info("📊 Dashboard should show: {} total employees, {} on leave today",
                                 employeeRepository.count(),
@@ -156,8 +197,15 @@ public class DataLoader implements CommandLineRunner {
 
         private Employee createEmployee(String fullName, String email, String position,
                         BigDecimal salary, LocalDate joinDate, String phone) {
+                
+                String[] names = fullName.split(" ", 2);
+                String firstName = names[0];
+                String lastName = names.length > 1 ? names[1] : "";
+
                 Employee employee = Employee.builder()
                                 .fullName(fullName)
+                                .firstName(firstName)
+                                .lastName(lastName)
                                 .email(email)
                                 .position(position)
                                 .currentSalary(salary)
@@ -199,5 +247,15 @@ public class DataLoader implements CommandLineRunner {
                                 .status(status)
                                 .build();
                 return leaveRequestRepository.save(leaveRequest);
+        }
+
+        private void createAttendance(Employee employee, LocalDate date, String checkInTime, String checkOutTime) {
+                Attendance attendance = Attendance.builder()
+                                .employee(employee)
+                                .date(date)
+                                .checkInTime(date.atTime(java.time.LocalTime.parse(checkInTime)))
+                                .checkOutTime(checkOutTime != null ? date.atTime(java.time.LocalTime.parse(checkOutTime)) : null)
+                                .build();
+                attendanceRepository.save(attendance);
         }
 }

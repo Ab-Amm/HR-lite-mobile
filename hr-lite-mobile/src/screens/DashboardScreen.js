@@ -1,21 +1,51 @@
 import React, { useCallback, useState, useEffect } from 'react';
-import { View, StyleSheet, ScrollView, RefreshControl, Alert } from 'react-native';
-import { Card, Text, Button, Surface, ActivityIndicator } from 'react-native-paper';
+import { View, StyleSheet, ScrollView, RefreshControl, Alert, Modal } from 'react-native';
+import { Card, Text, Button, Surface, ActivityIndicator, Portal, Dialog, TextInput, IconButton, Divider, Avatar } from 'react-native-paper';
 import { useFocusEffect } from '@react-navigation/native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useApp } from '../context/AppContext';
-import { attendanceApi } from '../api/api';
+import { attendanceApi, authApi } from '../api/api';
 import { colors, spacing, shadows, typography, borderRadius } from '../theme/theme';
 
 // For MVP, we'll use a hardcoded employee ID (first employee)
 const CURRENT_EMPLOYEE_ID = 1;
 
 const DashboardScreen = ({ navigation }) => {
-    const { dashboardStats, loading, fetchDashboardStats, fetchPendingLeaves, pendingLeaves, logout } = useApp();
+    const { dashboardStats, loading, fetchDashboardStats, fetchPendingLeaves, pendingLeaves, logout, userId } = useApp();
     const [refreshing, setRefreshing] = useState(false);
     const [attendance, setAttendance] = useState(null);
     const [attendanceLoading, setAttendanceLoading] = useState(false);
     const [elapsedTime, setElapsedTime] = useState(0);
+    const [showPasswordDialog, setShowPasswordDialog] = useState(false);
+    const [passwordForm, setPasswordForm] = useState({ oldPassword: '', newPassword: '', confirmPassword: '' });
+    const [passwordLoading, setPasswordLoading] = useState(false);
+
+    const handleChangePassword = async () => {
+        if (!passwordForm.oldPassword || !passwordForm.newPassword || !passwordForm.confirmPassword) {
+            Alert.alert('Error', 'Please fill all fields');
+            return;
+        }
+        if (passwordForm.newPassword !== passwordForm.confirmPassword) {
+            Alert.alert('Error', 'New passwords do not match');
+            return;
+        }
+        if (passwordForm.newPassword.length < 6) {
+            Alert.alert('Error', 'Password must be at least 6 characters');
+            return;
+        }
+
+        try {
+            setPasswordLoading(true);
+            await authApi.changePassword(userId, passwordForm.oldPassword, passwordForm.newPassword);
+            Alert.alert('Success', 'Password changed successfully');
+            setShowPasswordDialog(false);
+            setPasswordForm({ oldPassword: '', newPassword: '', confirmPassword: '' });
+        } catch (error) {
+            Alert.alert('Error', error.response?.data || 'Failed to change password');
+        } finally {
+            setPasswordLoading(false);
+        }
+    };
 
     const fetchAttendance = useCallback(async () => {
         try {
@@ -95,8 +125,8 @@ const DashboardScreen = ({ navigation }) => {
         return `${hrs}h ${mins}m`;
     };
 
-    const StatCard = ({ title, value, icon, color }) => (
-        <Surface style={[styles.statCard, shadows.medium]} elevation={2}>
+    const StatCard = ({ title, value, icon, color, onPress }) => (
+        <Surface style={[styles.statCard, shadows.medium]} elevation={2} onTouchEnd={onPress}>
             <View style={styles.statCardContent}>
                 <View style={[styles.iconContainer, { backgroundColor: color + '20' }]}>
                     <MaterialCommunityIcons name={icon} size={28} color={color} />
@@ -202,34 +232,50 @@ const DashboardScreen = ({ navigation }) => {
     }
 
     return (
-        <ScrollView
-            style={styles.container}
-            contentContainerStyle={styles.contentContainer}
+        <View style={styles.container}>
+            <ScrollView
+                contentContainerStyle={styles.contentContainer}
             refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={[colors.primary]} />}
         >
-            <View style={styles.header}>
-                <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <View>
-                        <Text style={styles.greeting}>Welcome to</Text>
-                        <Text style={styles.appName}>HR Lite</Text>
+            <Surface style={styles.headerCard} elevation={3}>
+                <View style={styles.headerTopRow}>
+                    <View style={styles.userInfo}>
+                        <Avatar.Icon size={48} icon="account-tie" style={{ backgroundColor: colors.primaryLight }} />
+                        <View style={styles.userTextContainer}>
+                            <Text style={styles.greeting}>Welcome back,</Text>
+                            <Text style={styles.userName}>HR Manager</Text>
+                        </View>
                     </View>
-                    <Button icon="logout" mode="text" onPress={logout} textColor={colors.error}>
-                        Logout
-                    </Button>
+                    <View style={styles.headerActions}>
+                        <IconButton 
+                            icon="lock-reset" 
+                            size={24} 
+                            iconColor={colors.primary} 
+                            onPress={() => setShowPasswordDialog(true)} 
+                            style={styles.actionButton}
+                        />
+                        <IconButton 
+                            icon="logout" 
+                            size={24} 
+                            iconColor={colors.error} 
+                            onPress={logout} 
+                            style={styles.actionButton}
+                        />
+                    </View>
                 </View>
-                <Text style={styles.date}>
-                    {new Date().toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
-                </Text>
-            </View>
-
-            {/* Attendance Card - Prominent */}
-            <Text style={styles.sectionTitle}>Your Attendance</Text>
-            <AttendanceCard />
+                <Divider style={styles.headerDivider} />
+                <View style={styles.dateRow}>
+                    <MaterialCommunityIcons name="calendar-month" size={18} color={colors.textSecondary} />
+                    <Text style={styles.dateText}>
+                        {new Date().toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
+                    </Text>
+                </View>
+            </Surface>
 
             <Text style={styles.sectionTitle}>Overview</Text>
             <View style={styles.statsRow}>
-                <StatCard title="Total Employees" value={dashboardStats.totalEmployees || 0} icon="account-group" color={colors.primary} />
-                <StatCard title="On Leave Today" value={dashboardStats.employeesOnLeave || 0} icon="beach" color={colors.warning} />
+                <StatCard title="Total Employees" value={dashboardStats.totalEmployees || 0} icon="account-group" color={colors.primary} onPress={() => navigation.navigate('Employees')} />
+                <StatCard title="On Leave Today" value={dashboardStats.employeesOnLeave || 0} icon="beach" color={colors.warning} onPress={() => navigation.navigate('EmployeesOnLeave')} />
             </View>
 
             <Card style={[styles.pendingCard, shadows.medium]}>
@@ -255,9 +301,6 @@ const DashboardScreen = ({ navigation }) => {
                 <Button mode="contained" icon="account-plus" onPress={() => navigation.navigate('AddEmployee')} style={styles.quickButton}>
                     Add Employee
                 </Button>
-                <Button mode="contained" icon="calendar-plus" onPress={() => navigation.navigate('CreateLeave')} style={[styles.quickButton, { backgroundColor: colors.info }]}>
-                    Request Leave
-                </Button>
             </View>
 
             <Card style={[styles.navCard, shadows.small]} onPress={() => navigation.navigate('Employees')}>
@@ -270,7 +313,44 @@ const DashboardScreen = ({ navigation }) => {
                     <MaterialCommunityIcons name="chevron-right" size={24} color={colors.textSecondary} />
                 </Card.Content>
             </Card>
-        </ScrollView>
+            </ScrollView>
+
+            <Portal>
+                <Dialog visible={showPasswordDialog} onDismiss={() => setShowPasswordDialog(false)} style={{ backgroundColor: 'white' }}>
+                    <Dialog.Title>Change Password</Dialog.Title>
+                    <Dialog.Content>
+                        <TextInput
+                            label="Current Password"
+                            value={passwordForm.oldPassword}
+                            onChangeText={(text) => setPasswordForm({ ...passwordForm, oldPassword: text })}
+                            secureTextEntry
+                            mode="outlined"
+                            style={{ marginBottom: 10, backgroundColor: 'white' }}
+                        />
+                        <TextInput
+                            label="New Password"
+                            value={passwordForm.newPassword}
+                            onChangeText={(text) => setPasswordForm({ ...passwordForm, newPassword: text })}
+                            secureTextEntry
+                            mode="outlined"
+                            style={{ marginBottom: 10, backgroundColor: 'white' }}
+                        />
+                        <TextInput
+                            label="Confirm New Password"
+                            value={passwordForm.confirmPassword}
+                            onChangeText={(text) => setPasswordForm({ ...passwordForm, confirmPassword: text })}
+                            secureTextEntry
+                            mode="outlined"
+                            style={{ backgroundColor: 'white' }}
+                        />
+                    </Dialog.Content>
+                    <Dialog.Actions>
+                        <Button onPress={() => setShowPasswordDialog(false)} textColor={colors.textSecondary}>Cancel</Button>
+                        <Button onPress={handleChangePassword} loading={passwordLoading} disabled={passwordLoading}>Update</Button>
+                    </Dialog.Actions>
+                </Dialog>
+            </Portal>
+        </View>
     );
 };
 
@@ -279,10 +359,59 @@ const styles = StyleSheet.create({
     contentContainer: { padding: spacing.md, paddingBottom: spacing.xxl },
     loadingContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: colors.background },
     loadingText: { marginTop: spacing.md, color: colors.textSecondary, fontSize: typography.body },
-    header: { marginBottom: spacing.lg, paddingTop: spacing.md },
-    greeting: { fontSize: typography.body, color: colors.textSecondary },
-    appName: { fontSize: typography.h1, fontWeight: typography.bold, color: colors.primary, marginBottom: spacing.xs },
-    date: { fontSize: typography.bodySmall, color: colors.textLight },
+    
+    // Header Styles
+    headerCard: {
+        backgroundColor: colors.surface,
+        borderRadius: borderRadius.lg,
+        padding: spacing.md,
+        marginBottom: spacing.lg,
+        marginTop: spacing.sm,
+    },
+    headerTopRow: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        marginBottom: spacing.sm,
+    },
+    userInfo: {
+        flexDirection: 'row',
+        alignItems: 'center',
+    },
+    userTextContainer: {
+        marginLeft: spacing.md,
+    },
+    greeting: {
+        fontSize: typography.caption,
+        color: colors.textSecondary,
+    },
+    userName: {
+        fontSize: typography.h3,
+        fontWeight: 'bold',
+        color: colors.textPrimary,
+    },
+    headerActions: {
+        flexDirection: 'row',
+    },
+    actionButton: {
+        margin: 0,
+    },
+    headerDivider: {
+        marginVertical: spacing.sm,
+        backgroundColor: colors.border,
+    },
+    dateRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
+    dateText: {
+        marginLeft: spacing.xs,
+        fontSize: typography.bodySmall,
+        color: colors.textSecondary,
+        fontWeight: '500',
+    },
+
     sectionTitle: { fontSize: typography.h4, fontWeight: typography.semiBold, color: colors.textPrimary, marginTop: spacing.lg, marginBottom: spacing.md },
     statsRow: { flexDirection: 'row', justifyContent: 'space-between', gap: spacing.md },
     statCard: { flex: 1, backgroundColor: colors.surface, borderRadius: borderRadius.lg, padding: spacing.md },

@@ -1,8 +1,11 @@
 import React, { useState } from 'react';
-import { View, StyleSheet, KeyboardAvoidingView, Platform, Image } from 'react-native';
+import { View, StyleSheet, KeyboardAvoidingView, Platform, Dimensions } from 'react-native';
 import { TextInput, Button, Text, Surface, HelperText } from 'react-native-paper';
 import { useApp } from '../context/AppContext';
-import { colors, spacing, typography } from '../theme/theme';
+import { colors, spacing, typography, borderRadius } from '../theme/theme';
+import AnimatedLogo from '../components/AnimatedLogo';
+
+const { width } = Dimensions.get('window');
 
 const LoginScreen = () => {
     const { login, loading, error, clearError } = useApp();
@@ -20,15 +23,21 @@ const LoginScreen = () => {
             behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
             style={styles.container}
         >
-            <Surface style={styles.content} elevation={2}>
-                <View style={styles.header}>
-                    <Text style={styles.title}>HR Lite</Text>
-                    <Text style={styles.subtitle}>Sign in to your account</Text>
-                </View>
+            <View style={styles.logoContainer}>
+                <Surface style={styles.logoSurface} elevation={4}>
+                    <AnimatedLogo size={70} />
+                </Surface>
+                <Text style={styles.appName}>HR Lite</Text>
+                <Text style={styles.tagline}>Manage your workforce efficiently</Text>
+            </View>
+
+            <Surface style={styles.formCard} elevation={2}>
+                <Text style={styles.welcomeText}>Welcome Back!</Text>
+                <Text style={styles.instructionText}>Please sign in to continue</Text>
 
                 <View style={styles.form}>
                     <TextInput
-                        label="Username"
+                        label="Email / Username"
                         value={username}
                         onChangeText={(text) => {
                             setUsername(text);
@@ -37,7 +46,9 @@ const LoginScreen = () => {
                         mode="outlined"
                         style={styles.input}
                         autoCapitalize="none"
-                        left={<TextInput.Icon icon="account" />}
+                        left={<TextInput.Icon icon="account" color={colors.primary} />}
+                        outlineColor={colors.border}
+                        activeOutlineColor={colors.primary}
                     />
 
                     <TextInput
@@ -54,15 +65,20 @@ const LoginScreen = () => {
                             <TextInput.Icon
                                 icon={secureTextEntry ? "eye" : "eye-off"}
                                 onPress={() => setSecureTextEntry(!secureTextEntry)}
+                                color={colors.textSecondary}
                             />
                         }
-                        left={<TextInput.Icon icon="lock" />}
+                        left={<TextInput.Icon icon="lock" color={colors.primary} />}
+                        outlineColor={colors.border}
+                        activeOutlineColor={colors.primary}
                     />
 
                     {error && (
-                        <HelperText type="error" visible={!!error}>
-                            {error}
-                        </HelperText>
+                        <View style={styles.errorContainer}>
+                            <HelperText type="error" visible={!!error} style={styles.errorText}>
+                                {error}
+                            </HelperText>
+                        </View>
                     )}
 
                     <Button
@@ -72,11 +88,16 @@ const LoginScreen = () => {
                         disabled={loading || !username || !password}
                         style={styles.button}
                         contentStyle={styles.buttonContent}
+                        labelStyle={styles.buttonLabel}
                     >
-                        Login
+                        LOGIN
                     </Button>
                 </View>
             </Surface>
+            
+            <View style={styles.footer}>
+                <Text style={styles.footerText}>© 2025 HR Lite System</Text>
+            </View>
         </KeyboardAvoidingView>
     );
 };
@@ -88,24 +109,50 @@ const styles = StyleSheet.create({
         justifyContent: 'center',
         padding: spacing.lg,
     },
-    content: {
-        padding: spacing.xl,
-        borderRadius: 12,
-        backgroundColor: 'white',
-    },
-    header: {
+    logoContainer: {
         alignItems: 'center',
         marginBottom: spacing.xl,
     },
-    title: {
-        fontSize: typography.h1,
+    logoSurface: {
+        width: 100,
+        height: 100,
+        borderRadius: 20,
+        justifyContent: 'center',
+        alignItems: 'center',
+        backgroundColor: 'white',
+        marginBottom: spacing.md,
+    },
+    appName: {
+        fontSize: 32,
         fontWeight: 'bold',
         color: colors.primary,
+        letterSpacing: 1,
+    },
+    tagline: {
+        fontSize: typography.body,
+        color: colors.textSecondary,
+        marginTop: spacing.xs,
+    },
+    formCard: {
+        padding: spacing.xl,
+        borderRadius: borderRadius.xl,
+        backgroundColor: 'white',
+        width: '100%',
+        maxWidth: 400,
+        alignSelf: 'center',
+    },
+    welcomeText: {
+        fontSize: typography.h3,
+        fontWeight: 'bold',
+        color: colors.textPrimary,
+        textAlign: 'center',
         marginBottom: spacing.xs,
     },
-    subtitle: {
-        fontSize: 16,
+    instructionText: {
+        fontSize: typography.body,
         color: colors.textSecondary,
+        textAlign: 'center',
+        marginBottom: spacing.lg,
     },
     form: {
         width: '100%',
@@ -114,12 +161,37 @@ const styles = StyleSheet.create({
         marginBottom: spacing.md,
         backgroundColor: 'white',
     },
+    errorContainer: {
+        marginBottom: spacing.sm,
+        alignItems: 'center',
+    },
+    errorText: {
+        fontSize: 14,
+    },
     button: {
-        marginTop: spacing.md,
-        borderRadius: 8,
+        marginTop: spacing.sm,
+        borderRadius: borderRadius.md,
+        backgroundColor: colors.primary,
     },
     buttonContent: {
-        paddingVertical: 6,
+        paddingVertical: spacing.sm,
+    },
+    buttonLabel: {
+        fontSize: 16,
+        fontWeight: 'bold',
+        letterSpacing: 1,
+        color: '#FFFFFF',
+    },
+    footer: {
+        position: 'absolute',
+        bottom: spacing.lg,
+        left: 0,
+        right: 0,
+        alignItems: 'center',
+    },
+    footerText: {
+        color: colors.textLight,
+        fontSize: typography.caption,
     },
 });
 

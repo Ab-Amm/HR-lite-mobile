@@ -1,6 +1,7 @@
 package com.hrlite.controller;
 
 
+import com.hrlite.dto.ChangePasswordDto;
 import com.hrlite.dto.UserLoginDto;
 import com.hrlite.service.UserService;
 import lombok.RequiredArgsConstructor;
@@ -24,5 +25,15 @@ public class AuthController {
 
         Response response = userService.verify(userLoginDto);
         return ResponseEntity.ok(response);
+    }
+
+    @PostMapping("/change-password")
+    public ResponseEntity<?> changePassword(@RequestBody ChangePasswordDto request) {
+        try {
+            userService.changePassword(request);
+            return ResponseEntity.ok().build();
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest().body(e.getMessage());
+        }
     }
 }

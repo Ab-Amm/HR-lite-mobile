@@ -1,14 +1,18 @@
 import React, { useEffect, useState } from 'react';
-import { View, StyleSheet, ScrollView, RefreshControl } from 'react-native';
-import { Card, Text, Avatar, Surface, Divider, ActivityIndicator, Button } from 'react-native-paper';
+import { View, StyleSheet, ScrollView, RefreshControl, Alert, Modal } from 'react-native';
+import { Card, Text, Avatar, Surface, Divider, ActivityIndicator, Button, TextInput, Portal, Dialog } from 'react-native-paper';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useApp } from '../../context/AppContext';
+import { authApi } from '../../api/api';
 import { colors, spacing, shadows, typography, borderRadius } from '../../theme/theme';
 
 const EmployeeProfileScreen = () => {
-    const { currentEmployee, fetchCurrentEmployee, loading, logout } = useApp();
+    const { currentEmployee, fetchCurrentEmployee, loading, logout, userId } = useApp();
     const [refreshing, setRefreshing] = useState(false);
     const [initialLoading, setInitialLoading] = useState(!currentEmployee);
+    const [showPasswordDialog, setShowPasswordDialog] = useState(false);
+    const [passwordForm, setPasswordForm] = useState({ oldPassword: '', newPassword: '', confirmPassword: '' });
+    const [passwordLoading, setPasswordLoading] = useState(false);
 
     useEffect(() => {
         const loadData = async () => {
@@ -50,6 +54,33 @@ const EmployeeProfileScreen = () => {
         const months = Math.floor(((now - start) % (365.25 * 24 * 60 * 60 * 1000)) / (30.44 * 24 * 60 * 60 * 1000));
         if (years === 0) return `${months} month${months !== 1 ? 's' : ''}`;
         return `${years} year${years !== 1 ? 's' : ''}, ${months} month${months !== 1 ? 's' : ''}`;
+    };
+
+    const handleChangePassword = async () => {
+        if (!passwordForm.oldPassword || !passwordForm.newPassword || !passwordForm.confirmPassword) {
+            Alert.alert('Error', 'Please fill all fields');
+            return;
+        }
+        if (passwordForm.newPassword !== passwordForm.confirmPassword) {
+            Alert.alert('Error', 'New passwords do not match');
+            return;
+        }
+        if (passwordForm.newPassword.length < 6) {
+            Alert.alert('Error', 'Password must be at least 6 characters');
+            return;
+        }
+
+        try {
+            setPasswordLoading(true);
+            await authApi.changePassword(userId, passwordForm.oldPassword, passwordForm.newPassword);
+            Alert.alert('Success', 'Password changed successfully');
+            setShowPasswordDialog(false);
+            setPasswordForm({ oldPassword: '', newPassword: '', confirmPassword: '' });
+        } catch (error) {
+            Alert.alert('Error', error.response?.data || 'Failed to change password');
+        } finally {
+            setPasswordLoading(false);
+        }
     };
 
     if (initialLoading) {
@@ -94,11 +125,9 @@ const EmployeeProfileScreen = () => {
                 </View>
                 <Text style={styles.name}>{currentEmployee?.fullName || 'Employee'}</Text>
                 <Text style={styles.position}>{currentEmployee?.position || 'Position'}</Text>
-                <View style={styles.badgeContainer}>
-                    <Surface style={styles.badge} elevation={1}>
-                        <MaterialCommunityIcons name="briefcase-clock" size={16} color={colors.primary} />
-                        <Text style={styles.badgeText}>{calculateYearsOfService(currentEmployee?.joinDate)}</Text>
-                    </Surface>
+                <View style={styles.serviceContainer}>
+                    <MaterialCommunityIcons name="trophy-outline" size={16} color={colors.textSecondary} />
+                    <Text style={styles.serviceText}>{calculateYearsOfService(currentEmployee?.joinDate)} of service</Text>
                 </View>
             </Surface>
 
@@ -110,10 +139,10 @@ const EmployeeProfileScreen = () => {
                         <Text style={styles.sectionTitle}>Personal Information</Text>
                     </View>
                     <Divider style={styles.divider} />
-                    <InfoRow icon="email" label="Email" value={currentEmployee?.email || 'N/A'} />
-                    <InfoRow icon="phone" label="Phone" value={currentEmployee?.phoneNumber || 'Not provided'} />
                     <InfoRow icon="account" label="First Name" value={currentEmployee?.firstName || 'N/A'} />
                     <InfoRow icon="account-outline" label="Last Name" value={currentEmployee?.lastName || 'N/A'} />
+                    <InfoRow icon="email" label="Email" value={currentEmployee?.email || 'N/A'} />
+                    <InfoRow icon="phone" label="Phone" value={currentEmployee?.phoneNumber || 'Not provided'} />
                 </Card.Content>
             </Card>
 
@@ -151,16 +180,72 @@ const EmployeeProfileScreen = () => {
                 </Surface>
             </View>
 
-            {/* Logout Button */}
-            <Button
-                mode="outlined"
-                onPress={logout}
-                style={styles.logoutButton}
-                textColor={colors.error}
-                icon="logout"
-            >
-                Sign Out
-            </Button>
+            {/* Account Settings */}
+            <Card style={[styles.card, shadows.small]}>
+                <Card.Content>
+                    <View style={styles.sectionHeader}>
+                        <MaterialCommunityIcons name="cog" size={24} color={colors.primary} />
+                        <Text style={styles.sectionTitle}>Account Settings</Text>
+                    </View>
+                    <Divider style={styles.divider} />
+                    
+                    <Button
+                        mode="outlined"
+                        onPress={() => setShowPasswordDialog(true)}
+                        style={[styles.actionButton, { borderColor: colors.primary }]}
+                        textColor={colors.primary}
+                        icon="lock-reset"
+                        contentStyle={styles.actionButtonContent}
+                    >
+                        Change Password
+                    </Button>
+
+                    <Button
+                        mode="contained"
+                        onPress={logout}
+                        style={[styles.actionButton, { marginTop: spacing.md, backgroundColor: colors.error }]}
+                        icon="logout"
+                        contentStyle={styles.actionButtonContent}
+                    >
+                        Logout
+                    </Button>
+                </Card.Content>
+            </Card>
+
+            <Portal>
+                <Dialog visible={showPasswordDialog} onDismiss={() => setShowPasswordDialog(false)} style={{ backgroundColor: colors.surface }}>
+                    <Dialog.Title>Change Password</Dialog.Title>
+                    <Dialog.Content>
+                        <TextInput
+                            label="Old Password"
+                            value={passwordForm.oldPassword}
+                            onChangeText={(text) => setPasswordForm({ ...passwordForm, oldPassword: text })}
+                            secureTextEntry
+                            mode="outlined"
+                            style={{ marginBottom: spacing.sm }}
+                        />
+                        <TextInput
+                            label="New Password"
+                            value={passwordForm.newPassword}
+                            onChangeText={(text) => setPasswordForm({ ...passwordForm, newPassword: text })}
+                            secureTextEntry
+                            mode="outlined"
+                            style={{ marginBottom: spacing.sm }}
+                        />
+                        <TextInput
+                            label="Confirm Password"
+                            value={passwordForm.confirmPassword}
+                            onChangeText={(text) => setPasswordForm({ ...passwordForm, confirmPassword: text })}
+                            secureTextEntry
+                            mode="outlined"
+                        />
+                    </Dialog.Content>
+                    <Dialog.Actions>
+                        <Button onPress={() => setShowPasswordDialog(false)}>Cancel</Button>
+                        <Button onPress={handleChangePassword} loading={passwordLoading} disabled={passwordLoading}>Change</Button>
+                    </Dialog.Actions>
+                </Dialog>
+            </Portal>
         </ScrollView>
     );
 };
@@ -220,22 +305,21 @@ const styles = StyleSheet.create({
     position: {
         fontSize: typography.body,
         color: colors.textSecondary,
-        marginBottom: spacing.md,
+        marginBottom: spacing.sm,
     },
-    badgeContainer: {
-        flexDirection: 'row',
-    },
-    badge: {
+    serviceContainer: {
         flexDirection: 'row',
         alignItems: 'center',
+        backgroundColor: colors.background,
         paddingHorizontal: spacing.md,
-        paddingVertical: spacing.sm,
+        paddingVertical: spacing.xs,
         borderRadius: borderRadius.round,
-        backgroundColor: colors.primary + '15',
+        borderWidth: 1,
+        borderColor: colors.border,
     },
-    badgeText: {
-        fontSize: typography.bodySmall,
-        color: colors.primary,
+    serviceText: {
+        fontSize: typography.caption,
+        color: colors.textSecondary,
         marginLeft: spacing.xs,
         fontWeight: typography.medium,
     },
@@ -310,10 +394,11 @@ const styles = StyleSheet.create({
         color: colors.textSecondary,
         marginTop: spacing.xs,
     },
-    logoutButton: {
-        borderColor: colors.error,
+    actionButton: {
         borderRadius: borderRadius.md,
-        marginTop: spacing.md,
+    },
+    actionButtonContent: {
+        paddingVertical: spacing.xs,
     },
 });
 

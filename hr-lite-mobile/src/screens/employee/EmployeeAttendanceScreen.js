@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useCallback } from 'react';
-import { View, StyleSheet, ScrollView, RefreshControl, Alert } from 'react-native';
-import { Card, Text, Button, Surface, ActivityIndicator, Divider, ProgressBar } from 'react-native-paper';
+import { View, StyleSheet, ScrollView, RefreshControl } from 'react-native';
+import { Card, Text, Button, Surface, ActivityIndicator, Divider, ProgressBar, Portal, Dialog, Paragraph, Snackbar } from 'react-native-paper';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useFocusEffect } from '@react-navigation/native';
 import { useApp } from '../../context/AppContext';
@@ -16,6 +16,11 @@ const EmployeeAttendanceScreen = () => {
     const [refreshing, setRefreshing] = useState(false);
     const [elapsedTime, setElapsedTime] = useState(0);
     const [dataLoaded, setDataLoaded] = useState(false);
+
+    // UI Feedback State
+    const [snackbar, setSnackbar] = useState({ visible: false, message: '', type: 'success' });
+    const [confirmDialogVisible, setConfirmDialogVisible] = useState(false);
+    const [successDialog, setSuccessDialog] = useState({ visible: false, title: '', message: '', icon: '' });
 
     const fetchAttendanceData = useCallback(async (showLoading = true) => {
         if (!currentEmployee?.id) return;
@@ -70,37 +75,48 @@ const EmployeeAttendanceScreen = () => {
             setActionLoading(true);
             const response = await attendanceApi.checkIn(currentEmployee.id);
             setAttendance(response.data);
-            Alert.alert('✅ Checked In', 'Good morning! Have a productive day!');
+            setSuccessDialog({
+                visible: true,
+                title: 'Checked In',
+                message: 'Good morning! Have a productive day!',
+                icon: 'weather-sunny'
+            });
         } catch (err) {
-            Alert.alert('Error', err.response?.data?.error || 'Failed to check in');
+            setSnackbar({ 
+                visible: true, 
+                message: err.response?.data?.error || 'Failed to check in', 
+                type: 'error' 
+            });
         } finally {
             setActionLoading(false);
         }
     };
 
-    const handleCheckOut = async () => {
-        Alert.alert(
-            'Confirm Check Out',
-            'Are you sure you want to check out for today?',
-            [
-                { text: 'Cancel', style: 'cancel' },
-                {
-                    text: 'Check Out',
-                    onPress: async () => {
-                        try {
-                            setActionLoading(true);
-                            const response = await attendanceApi.checkOut(currentEmployee.id);
-                            setAttendance(response.data);
-                            Alert.alert('👋 Checked Out', 'Great work today! See you tomorrow!');
-                        } catch (err) {
-                            Alert.alert('Error', err.response?.data?.error || 'Failed to check out');
-                        } finally {
-                            setActionLoading(false);
-                        }
-                    }
-                }
-            ]
-        );
+    const handleCheckOutConfirm = async () => {
+        setConfirmDialogVisible(false);
+        try {
+            setActionLoading(true);
+            const response = await attendanceApi.checkOut(currentEmployee.id);
+            setAttendance(response.data);
+            setSuccessDialog({
+                visible: true,
+                title: 'Checked Out',
+                message: 'Great work today! See you tomorrow!',
+                icon: 'hand-wave'
+            });
+        } catch (err) {
+            setSnackbar({ 
+                visible: true, 
+                message: err.response?.data?.error || 'Failed to check out', 
+                type: 'error' 
+            });
+        } finally {
+            setActionLoading(false);
+        }
+    };
+
+    const handleCheckOut = () => {
+        setConfirmDialogVisible(true);
     };
 
     const formatTime = (dateStr) => {
@@ -180,9 +196,11 @@ const EmployeeAttendanceScreen = () => {
             <Surface style={[styles.statusCard, shadows.medium]} elevation={3}>
                 <View style={styles.statusHeader}>
                     <Text style={styles.dateText}>{new Date().toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}</Text>
+                </View>
+                <View style={{ alignItems: 'center', marginBottom: spacing.lg }}>
                     <View style={[styles.statusBadge, { backgroundColor: statusInfo.color + '20' }]}>
-                        <MaterialCommunityIcons name={statusInfo.icon} size={16} color={statusInfo.color} />
-                        <Text style={[styles.statusText, { color: statusInfo.color }]}>{statusInfo.label}</Text>
+                        <MaterialCommunityIcons name={statusInfo.icon} size={20} color={statusInfo.color} />
+                        <Text style={[styles.statusText, { color: statusInfo.color, fontSize: typography.body }]}>{statusInfo.label}</Text>
                     </View>
                 </View>
 
@@ -276,28 +294,82 @@ const EmployeeAttendanceScreen = () => {
                         </View>
                     ) : (
                         history.slice(0, 10).map((record, index) => (
-                            <View key={record.id || index} style={styles.historyItem}>
-                                <View style={styles.historyDate}>
-                                    <Text style={styles.historyDateText}>{formatDate(record.date)}</Text>
-                                </View>
-                                <View style={styles.historyTimes}>
-                                    <View style={styles.historyTimeItem}>
-                                        <MaterialCommunityIcons name="login" size={16} color={colors.success} />
-                                        <Text style={styles.historyTimeText}>{formatTime(record.checkInTime)}</Text>
+                            <Surface key={record.id || index} style={[styles.historyItem, shadows.small]} elevation={1}>
+                                <View style={styles.historyHeaderRow}>
+                                    <View style={styles.historyDateContainer}>
+                                        <MaterialCommunityIcons name="calendar-month-outline" size={20} color={colors.primary} />
+                                        <Text style={styles.historyDateText}>{formatDate(record.date)}</Text>
                                     </View>
-                                    <View style={styles.historyTimeItem}>
-                                        <MaterialCommunityIcons name="logout" size={16} color={colors.error} />
-                                        <Text style={styles.historyTimeText}>{formatTime(record.checkOutTime)}</Text>
+                                    <View style={styles.historyDurationBadge}>
+                                        <MaterialCommunityIcons name="clock-outline" size={14} color={colors.primary} />
+                                        <Text style={styles.historyDurationText}>{formatWorkedTime(record.workedMinutes)}</Text>
                                     </View>
                                 </View>
-                                <View style={styles.historyHours}>
-                                    <Text style={styles.historyHoursText}>{formatWorkedTime(record.workedMinutes)}</Text>
+                                
+                                <Divider style={styles.historyDivider} />
+                                
+                                <View style={styles.historyTimeRow}>
+                                    <View style={styles.historyTimeBlock}>
+                                        <Text style={styles.historyTimeLabel}>Check In</Text>
+                                        <View style={styles.historyTimeValueContainer}>
+                                            <MaterialCommunityIcons name="login" size={16} color={colors.success} />
+                                            <Text style={styles.historyTimeValue}>{formatTime(record.checkInTime)}</Text>
+                                        </View>
+                                    </View>
+                                    
+                                    <View style={styles.verticalDivider} />
+                                    
+                                    <View style={styles.historyTimeBlock}>
+                                        <Text style={styles.historyTimeLabel}>Check Out</Text>
+                                        <View style={styles.historyTimeValueContainer}>
+                                            <MaterialCommunityIcons name="logout" size={16} color={colors.error} />
+                                            <Text style={styles.historyTimeValue}>{formatTime(record.checkOutTime)}</Text>
+                                        </View>
+                                    </View>
                                 </View>
-                            </View>
+                            </Surface>
                         ))
                     )}
                 </Card.Content>
             </Card>
+
+            <Portal>
+                {/* Confirmation Dialog */}
+                <Dialog visible={confirmDialogVisible} onDismiss={() => setConfirmDialogVisible(false)} style={{ backgroundColor: colors.surface }}>
+                    <Dialog.Icon icon="alert-circle-outline" size={40} color={colors.warning} />
+                    <Dialog.Title style={{ textAlign: 'center' }}>Confirm Check Out</Dialog.Title>
+                    <Dialog.Content>
+                        <Paragraph style={{ textAlign: 'center' }}>Are you sure you want to check out for today? This action cannot be undone.</Paragraph>
+                    </Dialog.Content>
+                    <Dialog.Actions style={{ justifyContent: 'space-around' }}>
+                        <Button onPress={() => setConfirmDialogVisible(false)} textColor={colors.textSecondary}>Cancel</Button>
+                        <Button onPress={handleCheckOutConfirm} mode="contained" buttonColor={colors.error}>Check Out</Button>
+                    </Dialog.Actions>
+                </Dialog>
+
+                {/* Success Dialog */}
+                <Dialog visible={successDialog.visible} onDismiss={() => setSuccessDialog(p => ({ ...p, visible: false }))} style={{ backgroundColor: colors.surface }}>
+                    <Dialog.Icon icon={successDialog.icon} size={50} color={colors.success} />
+                    <Dialog.Title style={{ textAlign: 'center' }}>{successDialog.title}</Dialog.Title>
+                    <Dialog.Content>
+                        <Paragraph style={{ textAlign: 'center' }}>{successDialog.message}</Paragraph>
+                    </Dialog.Content>
+                    <Dialog.Actions style={{ justifyContent: 'center' }}>
+                        <Button onPress={() => setSuccessDialog(p => ({ ...p, visible: false }))} mode="contained">Awesome!</Button>
+                    </Dialog.Actions>
+                </Dialog>
+
+                {/* Feedback Snackbar */}
+                <Snackbar
+                    visible={snackbar.visible}
+                    onDismiss={() => setSnackbar(p => ({ ...p, visible: false }))}
+                    duration={3000}
+                    style={{ backgroundColor: snackbar.type === 'error' ? colors.error : colors.success }}
+                    action={{ label: 'Close', onPress: () => setSnackbar(p => ({ ...p, visible: false })) }}
+                >
+                    {snackbar.message}
+                </Snackbar>
+            </Portal>
         </ScrollView>
     );
 };
@@ -329,10 +401,8 @@ const styles = StyleSheet.create({
         marginBottom: spacing.md,
     },
     statusHeader: {
-        flexDirection: 'row',
-        justifyContent: 'space-between',
         alignItems: 'center',
-        marginBottom: spacing.lg,
+        marginBottom: spacing.sm,
     },
     dateText: {
         fontSize: typography.body,
@@ -484,42 +554,72 @@ const styles = StyleSheet.create({
         marginTop: spacing.md,
     },
     historyItem: {
+        backgroundColor: colors.background,
+        borderRadius: borderRadius.md,
+        padding: spacing.md,
+        marginBottom: spacing.sm,
+    },
+    historyHeaderRow: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+    },
+    historyDateContainer: {
         flexDirection: 'row',
         alignItems: 'center',
-        paddingVertical: spacing.md,
-        borderBottomWidth: 1,
-        borderBottomColor: colors.border,
-    },
-    historyDate: {
-        flex: 1,
     },
     historyDateText: {
-        fontSize: typography.bodySmall,
+        fontSize: typography.body,
+        fontWeight: typography.semiBold,
         color: colors.textPrimary,
-        fontWeight: typography.medium,
+        marginLeft: spacing.sm,
     },
-    historyTimes: {
-        flex: 1.5,
+    historyDurationBadge: {
         flexDirection: 'row',
-        justifyContent: 'space-around',
+        alignItems: 'center',
+        backgroundColor: colors.primary + '15',
+        paddingHorizontal: spacing.md,
+        paddingVertical: spacing.xs,
+        borderRadius: borderRadius.round,
     },
-    historyTimeItem: {
+    historyDurationText: {
+        fontSize: typography.caption,
+        fontWeight: typography.bold,
+        color: colors.primary,
+        marginLeft: spacing.xs,
+    },
+    historyDivider: {
+        marginVertical: spacing.sm,
+        backgroundColor: colors.border,
+    },
+    historyTimeRow: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+    },
+    historyTimeBlock: {
+        flex: 1,
+        alignItems: 'center',
+    },
+    historyTimeLabel: {
+        fontSize: typography.caption,
+        color: colors.textSecondary,
+        marginBottom: 2,
+    },
+    historyTimeValueContainer: {
         flexDirection: 'row',
         alignItems: 'center',
     },
-    historyTimeText: {
+    historyTimeValue: {
         fontSize: typography.bodySmall,
-        color: colors.textSecondary,
+        fontWeight: typography.medium,
+        color: colors.textPrimary,
         marginLeft: spacing.xs,
     },
-    historyHours: {
-        flex: 0.8,
-        alignItems: 'flex-end',
-    },
-    historyHoursText: {
-        fontSize: typography.bodySmall,
-        fontWeight: typography.semiBold,
-        color: colors.primary,
+    verticalDivider: {
+        width: 1,
+        height: 24,
+        backgroundColor: colors.border,
     },
 });
 

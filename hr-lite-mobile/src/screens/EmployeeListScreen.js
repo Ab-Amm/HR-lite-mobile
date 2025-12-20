@@ -99,7 +99,7 @@ const styles = StyleSheet.create({
     employeeInfo: { flex: 1 },
     employeeName: { fontSize: typography.body, fontWeight: typography.semiBold, color: colors.textPrimary },
     employeePosition: { fontSize: typography.bodySmall, color: colors.textSecondary, marginTop: spacing.xs },
-    chip: { backgroundColor: colors.background, height: 26, marginTop: spacing.sm, alignSelf: 'flex-start' },
+    chip: { backgroundColor: colors.background, marginTop: spacing.sm, alignSelf: 'flex-start' },
     chipText: { fontSize: typography.caption, color: colors.textSecondary },
     emptyContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', paddingVertical: spacing.xxl * 2 },
     emptyTitle: { fontSize: typography.h3, fontWeight: typography.semiBold, color: colors.textPrimary, marginTop: spacing.md },

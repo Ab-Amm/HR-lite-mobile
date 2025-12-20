@@ -4,10 +4,12 @@ import com.hrlite.entity.Contract;
 import com.hrlite.entity.Employee;
 import com.hrlite.entity.LeaveRequest;
 import com.hrlite.entity.enums.LeaveStatus;
+import com.hrlite.entity.enums.Role;
 import com.hrlite.repository.ContractRepository;
 import com.hrlite.repository.EmployeeRepository;
 import com.hrlite.repository.LeaveRequestRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -26,6 +28,7 @@ public class EmployeeService {
     private final EmployeeRepository employeeRepository;
     private final LeaveRequestRepository leaveRequestRepository;
     private final ContractRepository contractRepository;
+    private final BCryptPasswordEncoder encoder = new BCryptPasswordEncoder(12);
 
     @Transactional(readOnly = true)
     public List<Employee> getAllEmployees() {
@@ -46,6 +49,9 @@ public class EmployeeService {
         if (employeeRepository.existsByEmail(employee.getEmail())) {
             throw new IllegalArgumentException("Employee with email " + employee.getEmail() + " already exists");
         }
+
+        // Set default role to EMPLOYEE
+        employee.setRole(Role.EMPLOYEE);
         
         // Validate positive salary
         if (employee.getCurrentSalary() == null || employee.getCurrentSalary().compareTo(BigDecimal.ZERO) <= 0) {
@@ -55,6 +61,14 @@ public class EmployeeService {
         // Validate join date is not in the future
         if (employee.getJoinDate().isAfter(LocalDate.now())) {
             throw new IllegalArgumentException("Join date cannot be in the future");
+        }
+
+        // Encode password if present, otherwise set default
+        if (employee.getPassword() != null && !employee.getPassword().isEmpty()) {
+            employee.setPassword(encoder.encode(employee.getPassword()));
+        } else {
+            // Default password for new employees if not provided
+            employee.setPassword(encoder.encode("password123"));
         }
         
         return employeeRepository.save(employee);

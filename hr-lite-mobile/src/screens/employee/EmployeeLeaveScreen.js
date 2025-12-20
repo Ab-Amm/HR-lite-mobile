@@ -197,14 +197,14 @@ const EmployeeLeaveScreen = () => {
                                                 <MaterialCommunityIcons name={typeConfig.icon} size={20} color={typeConfig.color} />
                                                 <Text style={[styles.leaveType, { color: typeConfig.color }]}>{typeConfig.label}</Text>
                                             </View>
-                                            <Chip
-                                                icon={() => <MaterialCommunityIcons name={statusConfig.icon} size={14} color={statusConfig.color} />}
-                                                style={[styles.statusChip, { backgroundColor: statusConfig.color + '20' }]}
-                                                textStyle={{ color: statusConfig.color, fontSize: 12 }}
-                                            >
-                                                {statusConfig.label}
-                                            </Chip>
+                                            <View style={[styles.statusBadge, { backgroundColor: statusConfig.color + '15' }]}>
+                                                <MaterialCommunityIcons name={statusConfig.icon} size={14} color={statusConfig.color} />
+                                                <Text style={[styles.statusText, { color: statusConfig.color }]}>{statusConfig.label}</Text>
+                                            </View>
                                         </View>
+                                        
+                                        <Divider style={{ marginVertical: 8, backgroundColor: colors.border }} />
+                                        
                                         <View style={styles.leaveDates}>
                                             <View style={styles.dateRange}>
                                                 <MaterialCommunityIcons name="calendar-range" size={18} color={colors.textSecondary} />
@@ -448,8 +448,17 @@ const styles = StyleSheet.create({
         fontWeight: typography.semiBold,
         marginLeft: spacing.sm,
     },
-    statusChip: {
-        height: 28,
+    statusBadge: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        paddingHorizontal: spacing.md,
+        paddingVertical: spacing.xs,
+        borderRadius: borderRadius.round,
+    },
+    statusText: {
+        fontSize: typography.caption,
+        fontWeight: typography.semiBold,
+        marginLeft: spacing.xs,
     },
     leaveDates: {
         flexDirection: 'row',

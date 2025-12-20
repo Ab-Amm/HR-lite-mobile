@@ -6,7 +6,7 @@ import * as SecureStore from 'expo-secure-store';
 // PHYSICAL DEVICE: Using your machine's local IP
 // Change this IP if your network changes
 // =====================================================
-const BASE_URL = 'http://192.168.0.122:8090/api';
+const BASE_URL = 'http://192.168.0.176:8090/api';
 
 // For Android Emulator only, uncomment this instead:
 // const BASE_URL = 'http://10.0.2.2:8080/api';
@@ -59,6 +59,7 @@ api.interceptors.response.use(
 
 export const authApi = {
     login: (username, password) => api.post('/auth/login', { userName: username, password }),
+    changePassword: (userId, oldPassword, newPassword) => api.post('/auth/change-password', { userId, oldPassword, newPassword }),
 };
 
 // ==================== EMPLOYEE API ====================
@@ -109,6 +110,7 @@ export const leaveApi = {
     getPending: () => api.get('/leaves/pending'),
     getByEmployeeId: (employeeId) => api.get(`/leaves/employee/${employeeId}`),
     getByStatus: (status) => api.get(`/leaves/status/${status}`),
+    getOnLeave: (date) => api.get(`/leaves/on-leave${date ? `?date=${date}` : ''}`),
     create: (employeeId, leaveRequest) => api.post(`/leaves/employee/${employeeId}`, leaveRequest),
     approve: (id) => api.patch(`/leaves/${id}/approve`),
     reject: (id) => api.patch(`/leaves/${id}/reject`),

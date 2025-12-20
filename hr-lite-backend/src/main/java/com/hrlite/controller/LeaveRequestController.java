@@ -9,6 +9,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.time.LocalDate;
 import java.util.List;
 
 @RestController
@@ -48,6 +49,15 @@ public class LeaveRequestController {
     public ResponseEntity<List<LeaveRequest>> getLeaveRequestsByStatus(@PathVariable LeaveStatus status) {
         List<LeaveRequest> leaveRequests = leaveRequestService.getLeaveRequestsByStatus(status);
         return ResponseEntity.ok(leaveRequests);
+    }
+
+    @GetMapping("/on-leave")
+    public ResponseEntity<List<LeaveRequest>> getApprovedLeavesOnDate(@RequestParam(required = false) LocalDate date) {
+        if (date == null) {
+            date = LocalDate.now();
+        }
+        List<LeaveRequest> leaves = leaveRequestService.getApprovedLeavesOnDate(date);
+        return ResponseEntity.ok(leaves);
     }
 
     @PostMapping("/employee/{employeeId}")

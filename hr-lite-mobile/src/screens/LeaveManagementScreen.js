@@ -89,7 +89,7 @@ const styles = StyleSheet.create({
     dateText: { marginLeft: spacing.sm },
     dateLabel: { fontSize: typography.caption, color: colors.textSecondary },
     dateValue: { fontSize: typography.bodySmall, fontWeight: typography.medium, color: colors.textPrimary },
-    durationChip: { backgroundColor: colors.primary + '15', marginTop: spacing.md, alignSelf: 'flex-start' },
+    durationChip: { backgroundColor: colors.primary + '15', marginTop: spacing.md, marginBottom: spacing.md, alignSelf: 'flex-start' },
     cardActions: { padding: spacing.sm, paddingTop: 0 },
     rejectBtn: { flex: 1, marginRight: spacing.xs, borderColor: colors.error },
     approveBtn: { flex: 1, marginLeft: spacing.xs, backgroundColor: colors.success },

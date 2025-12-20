@@ -329,13 +329,12 @@ const styles = StyleSheet.create({
         backgroundColor: colors.border,
     },
     currentDetails: {
-        flexDirection: 'row',
-        justifyContent: 'space-between',
+        flexDirection: 'column',
+        gap: spacing.md,
     },
     currentDetailItem: {
         flexDirection: 'row',
         alignItems: 'center',
-        flex: 1,
     },
     currentDetailText: {
         marginLeft: spacing.sm,
@@ -440,6 +439,7 @@ const styles = StyleSheet.create({
     contractHeaderText: {
         flex: 1,
         marginLeft: spacing.md,
+        marginRight: spacing.sm,
     },
     contractType: {
         fontSize: typography.body,
@@ -451,17 +451,20 @@ const styles = StyleSheet.create({
         color: colors.textSecondary,
     },
     statusChip: {
-        height: 24,
+        // height: 24, // Removed fixed height
     },
     contractDetails: {
         backgroundColor: colors.surface,
         borderRadius: borderRadius.sm,
-        padding: spacing.sm,
+        padding: spacing.md,
+        marginTop: spacing.xs,
     },
     contractDetailRow: {
         flexDirection: 'row',
         justifyContent: 'space-between',
-        marginBottom: spacing.xs,
+        marginBottom: spacing.sm,
+        flexWrap: 'wrap',
+        gap: spacing.sm,
     },
     contractDetail: {
         flexDirection: 'row',

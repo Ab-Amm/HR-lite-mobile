@@ -3,6 +3,7 @@ package com.hrlite.service;
 import com.hrlite.Jwt.Model.UserPrincipal;
 import com.hrlite.Jwt.Service.JWTService;
 import com.hrlite.controller.Response;
+import com.hrlite.dto.ChangePasswordDto;
 import com.hrlite.dto.UserLoginDto;
 import com.hrlite.entity.User;
 import com.hrlite.entity.enums.Role;
@@ -11,6 +12,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
@@ -24,6 +26,7 @@ public class UserService {
     private final UserRepository   userRepository;
     private final JWTService jwtService;
     private  final AuthenticationManager authManager;
+    private final BCryptPasswordEncoder encoder = new BCryptPasswordEncoder(12);
 
 
     public Response verify(UserLoginDto user) {
@@ -32,7 +35,6 @@ public class UserService {
         if (authentication.isAuthenticated()) {
             UserPrincipal userDetails = (UserPrincipal) authentication.getPrincipal();
             User userDb  = userDetails.getUser() ;
-
             userDb = userRepository.save(userDb);
             List<Role> roles = new ArrayList<>();
             roles.add(userDb.getRole());
@@ -48,5 +50,17 @@ public class UserService {
 
         }
         return response;
+    }
+
+    public void changePassword(ChangePasswordDto request) {
+        User user = userRepository.findById(request.getUserId())
+                .orElseThrow(() -> new IllegalArgumentException("User not found"));
+
+        if (!encoder.matches(request.getOldPassword(), user.getPassword())) {
+            throw new IllegalArgumentException("Invalid old password");
+        }
+
+        user.setPassword(encoder.encode(request.getNewPassword()));
+        userRepository.save(user);
     }
 }

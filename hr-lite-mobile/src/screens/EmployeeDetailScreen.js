@@ -4,18 +4,26 @@ import { Text, Card, Avatar, Chip, Divider, ActivityIndicator, Button, IconButto
 import { useFocusEffect } from '@react-navigation/native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useApp } from '../context/AppContext';
+import { attendanceApi } from '../api/api';
 import { colors, spacing, shadows, typography, borderRadius } from '../theme/theme';
 
 const EmployeeDetailScreen = ({ route, navigation }) => {
     const { employeeId } = route.params;
     const { selectedEmployee, contracts, leaveRequests, loading, fetchEmployeeById, fetchContractsByEmployee, fetchLeavesByEmployee, deleteEmployee } = useApp();
     const [activeTab, setActiveTab] = useState(0);
+    const [attendanceHistory, setAttendanceHistory] = useState([]);
     const [refreshing, setRefreshing] = useState(false);
     const [deleting, setDeleting] = useState(false);
-    const tabs = ['Profile', 'Contracts', 'Leaves'];
+    const tabs = ['Profile', 'Contracts', 'Leaves', 'Attendance'];
 
     const loadData = useCallback(async () => {
         await Promise.all([fetchEmployeeById(employeeId), fetchContractsByEmployee(employeeId), fetchLeavesByEmployee(employeeId)]);
+        try {
+            const res = await attendanceApi.getHistory(employeeId);
+            setAttendanceHistory(res.data);
+        } catch (e) {
+            console.error("Failed to fetch attendance", e);
+        }
     }, [employeeId, fetchEmployeeById, fetchContractsByEmployee, fetchLeavesByEmployee]);
 
     useFocusEffect(useCallback(() => { loadData(); }, [loadData]));
@@ -174,6 +182,63 @@ const EmployeeDetailScreen = ({ route, navigation }) => {
         </View>
     );
 
+    const AttendanceTab = () => {
+        const formatTime = (t) => t ? new Date(t).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }) : '--:--';
+        const calculateDuration = (start, end) => {
+            if (!start || !end) return 'In Progress';
+            const diff = new Date(end) - new Date(start);
+            const hours = Math.floor(diff / (1000 * 60 * 60));
+            const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+            return `${hours}h ${minutes}m`;
+        };
+
+        if (!attendanceHistory || attendanceHistory.length === 0) {
+            return (
+                <View style={styles.emptyState}>
+                    <MaterialCommunityIcons name="calendar-clock" size={60} color={colors.textLight} />
+                    <Text style={styles.emptyText}>No attendance records found</Text>
+                </View>
+            );
+        }
+
+        return (
+            <View style={styles.tabContent}>
+                {attendanceHistory.map((record) => (
+                    <Card key={record.id} style={[styles.infoCard, shadows.small]}>
+                        <Card.Content>
+                            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: spacing.sm }}>
+                                <Text style={{ fontSize: typography.body, fontWeight: typography.semiBold, color: colors.textPrimary }}>{formatDate(record.date)}</Text>
+                                <Chip 
+                                    icon={record.checkOutTime ? "check-circle" : "clock-outline"} 
+                                    style={{ backgroundColor: record.checkOutTime ? colors.success + '15' : colors.warning + '15' }}
+                                    textStyle={{ color: record.checkOutTime ? colors.success : colors.warning }}
+                                    compact
+                                >
+                                    {record.checkOutTime ? 'Completed' : 'Active'}
+                                </Chip>
+                            </View>
+                            <Divider style={styles.divider} />
+                            <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
+                                <View>
+                                    <Text style={styles.infoLabel}>Check In</Text>
+                                    <Text style={styles.infoValue}>{formatTime(record.checkInTime)}</Text>
+                                </View>
+                                <View>
+                                    <Text style={styles.infoLabel}>Check Out</Text>
+                                    <Text style={styles.infoValue}>{formatTime(record.checkOutTime)}</Text>
+                                </View>
+                                <View>
+                                    <Text style={styles.infoLabel}>Duration</Text>
+                                    <Text style={styles.infoValue}>{calculateDuration(record.checkInTime, record.checkOutTime)}</Text>
+                                </View>
+                            </View>
+                        </Card.Content>
+                    </Card>
+                ))}
+            </View>
+        );
+    };
+
     if (loading && !selectedEmployee) return <View style={styles.loadingContainer}><ActivityIndicator size="large" color={colors.primary} /></View>;
     if (!selectedEmployee) return <View style={styles.errorContainer}><MaterialCommunityIcons name="alert-circle-outline" size={60} color={colors.error} /><Text style={styles.errorText}>Employee not found</Text></View>;
 
@@ -190,6 +255,7 @@ const EmployeeDetailScreen = ({ route, navigation }) => {
                 {activeTab === 0 && <ProfileTab />}
                 {activeTab === 1 && <ContractsTab />}
                 {activeTab === 2 && <LeavesTab />}
+                {activeTab === 3 && <AttendanceTab />}
                 <View style={{ height: 80 }} />
             </ScrollView>
 

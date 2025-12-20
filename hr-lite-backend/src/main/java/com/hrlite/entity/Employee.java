@@ -50,7 +50,6 @@ public class Employee extends User{
     private List<Contract> contracts = new ArrayList<>();
 
     @OneToMany(mappedBy = "employee", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
-    @JsonManagedReference(value = "employee-leaves")
     @Builder.Default
     private List<LeaveRequest> leaveRequests = new ArrayList<>();
 
